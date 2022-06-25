@@ -10,14 +10,14 @@ contract CompanyFacotry {
     address indexed creator,
     address indexed deployedAddr,
     string indexed name,
-    address tokenAddress,
+    address companyToken,
     string symbol,
     string baseURI_
   );
 function createCompany(
     string calldata name_,
     string calldata symbol_,
-    address tokenAddress_,
+    address companyToken_,
     string calldata baseURI_, 
     address host_, 
     address superTokenFactory_
@@ -28,7 +28,7 @@ function createCompany(
       name_,
       symbol_,
       msg.sender,
-      tokenAddress_,
+      companyToken_,
       baseURI_, 
       host_,
       superTokenFactory_
@@ -42,7 +42,7 @@ function createCompany(
       msg.sender,
       newCompanyAddr,
       name_,
-      tokenAddress_,
+      companyToken_,
       symbol_,
       baseURI_
     );
