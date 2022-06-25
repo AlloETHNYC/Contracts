@@ -51,7 +51,7 @@ contract StreamRedirect is SuperAppBase {
     _superCompanyToken = _superTokenFactory.createERC20Wrapper(
       IERC20(companyToken),
       uint8(18), // decimals
-      0,   // upgradability
+      ISuperTokenFactory.Upgradability.NON_UPGRADABLE,   // upgradability
       IERC20Metadata(companyToken).name(),  // token name (Note: add super to string)
       IERC20Metadata(companyToken).symbol() // token symbol (Note: add x to symbol)
     );
@@ -68,10 +68,10 @@ contract StreamRedirect is SuperAppBase {
 
   function _wrap(uint256 _amountOfTokens) internal {
     // Verify balance of tokens
-    require(IERC20(_companyToken).balanceOf(this) == _amountOfTokens, "Contract does not have correct amount of tokens");
+    require(IERC20(_companyToken).balanceOf(address(this)) == _amountOfTokens, "Contract does not have correct amount of tokens");
 
     // Wrap tokens
-    IERC20(_companyToken).approve(_superCompanyToken, _amountOfTokens);
+    IERC20(_companyToken).approve(address(_superCompanyToken), _amountOfTokens);
     _superCompanyToken.upgrade(_amountOfTokens);
   }
 
@@ -97,16 +97,16 @@ contract StreamRedirect is SuperAppBase {
     
     // Get flowrate of existing allocation
     (, int96 outFlowRate, , ) = cfaV1.cfa.getFlow(
-      _companyToken,
+      _superCompanyToken,
       address(this),
       receiver
     ); //CHECK: unclear what happens if flow doesn't exist.
 
     if (outFlowRate > 0) {
-      cfaV1.deleteFlow(address(this), receiver, _companyToken);
+      cfaV1.deleteFlow(address(this), receiver, _superCompanyToken);
       cfaV1.createFlow(
         _newReceiver,
-        _companyToken,
+        _superCompanyToken,
         outFlowRate
       );  // Note: can include option data. Maybe to include the allocation NFT info or something
     }

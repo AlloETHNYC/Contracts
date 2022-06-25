@@ -17,10 +17,12 @@ contract Company is ERC721, StreamRedirect, Ownable {
     string memory symbol_,
     address owner_,
     address tokenAddress_,
-    string memory baseURI_
-
+    string memory baseURI_,
+    address host_,
+    address superTokenFactory_
   )
     ERC721(name_, symbol_)
+    StreamRedirect(ISuperfluid(host_),ISuperTokenFactory(superTokenFactory_),tokenAddress_)
   {
     transferOwnership(owner_);
     tokenAddress = tokenAddress_;

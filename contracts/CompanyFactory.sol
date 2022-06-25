@@ -18,7 +18,9 @@ function createCompany(
     string calldata name_,
     string calldata symbol_,
     address tokenAddress_,
-    string calldata baseURI_
+    string calldata baseURI_, 
+    address host_, 
+    address superTokenFactory_
 
   ) external returns (address newCompanyAddr) {
     uint256 index = companyNumByCreator[msg.sender];
@@ -27,7 +29,9 @@ function createCompany(
       symbol_,
       msg.sender,
       tokenAddress_,
-      baseURI_
+      baseURI_, 
+      host_,
+      superTokenFactory_
     );
     newCompanyAddr = address(company);
     companyMap[msg.sender][index] = newCompanyAddr;
