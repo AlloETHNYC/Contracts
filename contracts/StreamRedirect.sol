@@ -1,0 +1,6 @@
+
+
+
+contract StreamRedirect is superApp {
+  
+}
