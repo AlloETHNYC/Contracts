@@ -27,6 +27,14 @@ contract StreamRedirect is SuperAppBase {
 
   IERC721 immutable _companyNFT;  // NFT collection of company allocation
 
+  // Events
+  event tokensWrapped(uint256 amount);
+  event tokensUnwrapped(uint256 amount, address indexed receiver);
+  event allocationStreamCreated(address indexed receiver, int96 flowrate);
+  event allocationStreamRedirected(address oldReceiver, address newReceiver);
+  event allocationStreamBurned(address indexed receiver);
+
+
   constructor(
     ISuperfluid host, 
     ISuperTokenFactory superTokenFactory,
@@ -52,15 +60,9 @@ contract StreamRedirect is SuperAppBase {
       IERC20(companyToken),
       uint8(18), // decimals
       ISuperTokenFactory.Upgradability.NON_UPGRADABLE,   // upgradability
-      IERC20Metadata(companyToken).name(),  // token name (Note: add super to string)
-      IERC20Metadata(companyToken).symbol() // token symbol (Note: add x to symbol)
+      /*string.concat("Super ", bytes(IERC20Metadata(companyToken).name()))*/ "test",  // token name (Note: add super to string - DONE)
+      /*string.concat(bytes(IERC20Metadata(companyToken).symbol()), "x")*/ "test" // token symbol (Note: add x to symbol - DONE)
     );
-
-    // // Wrap tokens (Note: approve first!)
-
-    // _companyToken.upgrade(amountOfTokens);
-
-    // _companyToken;
 
     _companyNFT = IERC721(address(this));
 
@@ -75,6 +77,18 @@ contract StreamRedirect is SuperAppBase {
     _superCompanyToken.upgrade(_amountOfTokens);
 
     // Verify successful wrap
+
+    emit tokensWrapped(_amountOfTokens);
+  }
+
+  function unwrap(uint256 _amountOfTokens) public {
+    (int256 userBalance, , ) = ISuperToken(_superCompanyToken).realtimeBalanceOf(msg.sender, block.timestamp);
+    require(userBalance >= int256(_amountOfTokens), "Amount exceeds user's balance");
+
+    _superCompanyToken.downgrade(_amountOfTokens);
+    IERC20(_companyToken).transfer(msg.sender, _amountOfTokens);
+
+    emit tokensUnwrapped(_amountOfTokens, msg.sender);
   }
 
   function _createStream(address _receiver, int96 _flowrate) internal {
@@ -84,10 +98,12 @@ contract StreamRedirect is SuperAppBase {
       _superCompanyToken,
       _flowrate
     );  // Note: can include option data. Maybe to include the allocation NFT info or something
+    emit allocationStreamCreated(_receiver, _flowrate);
   }
 
   function _deleteStream(address _receiver) internal {
     cfaV1.deleteFlow(address(this), _receiver, _superCompanyToken);
+    emit allocationStreamBurned(_receiver);
   }
 
   function _changeReceiver(uint256 _allocationId, address _newReceiver) internal {
@@ -113,6 +129,8 @@ contract StreamRedirect is SuperAppBase {
         outFlowRate
       );  // Note: can include option data. Maybe to include the allocation NFT info or something
     }
+
+    emit allocationStreamRedirected(receiver, _newReceiver);
   }
 
 }
