@@ -73,25 +73,28 @@ contract StreamRedirect is SuperAppBase {
     // Wrap tokens
     IERC20(_companyToken).approve(address(_superCompanyToken), _amountOfTokens);
     _superCompanyToken.upgrade(_amountOfTokens);
+
+    // Verify successful wrap
   }
 
-  function _createStream(address _receiver, ISuperToken _tokenx, int96 _flowrate) internal {
+  function _createStream(address _receiver, int96 _flowrate) internal {
     // Note: Will probably need to verify that a stream doesn't already exist
     cfaV1.createFlow(
       _receiver,
-      _tokenx,
+      _superCompanyToken,
       _flowrate
     );  // Note: can include option data. Maybe to include the allocation NFT info or something
   }
 
-  function _deleteStream(address _receiver, ISuperToken _tokenx) internal {
-    cfaV1.deleteFlow(address(this), _receiver, _tokenx);
+  function _deleteStream(address _receiver) internal {
+    cfaV1.deleteFlow(address(this), _receiver, _superCompanyToken);
   }
 
   function _changeReceiver(uint256 _allocationId, address _newReceiver) internal {
-    require(_newReceiver != address(0), "New receiver is zero address");
 
-    address receiver = _companyNFT.ownerOf(_allocationId);  // token id must exist
+    require(_newReceiver != address(0), "New receiver is zero address");  
+
+    address receiver = _companyNFT.ownerOf(_allocationId);  // token id must exist 
 
     if (_newReceiver == receiver) return; 
     
