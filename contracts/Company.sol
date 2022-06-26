@@ -13,7 +13,7 @@ import "./StreamRedirect.sol";
 contract Company is ERC721, StreamRedirect, Ownable, KeeperCompatibleInterface {
   using Counters for Counters.Counter;
   // using StructuredLinkedList for StructuredLinkedList.List;
-  Counters.Counter private _tokenIdTracker;
+  Counters.Counter public tokenIdTracker;
   // StructuredLinkedList.List list;
   address public companyToken;
   uint256 public vestingPeriod;
@@ -69,10 +69,10 @@ contract Company is ERC721, StreamRedirect, Ownable, KeeperCompatibleInterface {
     require(receiver != address(0), "Receiver can't be zero address");
     require(balanceOf(receiver) == 0, "Receiver already has an allocation");
 
-    uint256 tokenId = _tokenIdTracker.current();
+    uint256 tokenId = tokenIdTracker.current();
     _safeMint(receiver, tokenId);
     // expirationMap[tokenId] = block.timestamp + vestingPeriod * 365 days;
-    _tokenIdTracker.increment();
+    tokenIdTracker.increment();
     //Open up a stream
     //OpenStream(companyToken,this.address, receiver, flowRate)
     _createStream(receiver, flowrate);
