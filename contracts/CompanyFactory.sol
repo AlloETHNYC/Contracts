@@ -12,10 +12,10 @@ contract CompanyFactory {
   event newCompanyCreated(
     address indexed creator,
     address indexed deployedAddr,
-    string indexed name,
+    string name,
     address companyToken,
     string symbol,
-    string baseURI_
+    string baseURI
   );
 
   function createCompany(
