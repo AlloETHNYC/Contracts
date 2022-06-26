@@ -9,23 +9,31 @@ contract CompanyFactory {
   // mapping(address => uint256) public companyNumByCreator;
   
   // address[] public allCompanies;
+
+  struct MetadataInfo {
+    uint256 vestingPeriod;
+    string baseURI;
+    string description;
+  }
+
   event newCompanyCreated(
     address indexed creator,
     address indexed deployedAddr,
     string name,
     address companyToken,
     string symbol,
-    string baseURI
+    string baseURI,
+    string description,
+    uint256 vestingPeriod
   );
 
   function createCompany(
     string calldata name_,
     string calldata symbol_,
     address companyToken_,
-    string calldata baseURI_, 
     address host_, 
-    address superTokenFactory_
-
+    address superTokenFactory_,
+    MetadataInfo calldata metadataInfo_
   ) external returns (address newCompanyAddr) {
     // uint256 index = companyNumByCreator[msg.sender];
     Company company = new Company(
@@ -33,9 +41,10 @@ contract CompanyFactory {
       symbol_,
       msg.sender,
       companyToken_,
-      baseURI_, 
+      metadataInfo_.baseURI, 
       host_,
-      superTokenFactory_
+      superTokenFactory_,
+      metadataInfo_.vestingPeriod
     );
     newCompanyAddr = address(company);
     // companyMap[msg.sender][index] = newCompanyAddr;
@@ -48,7 +57,9 @@ contract CompanyFactory {
       name_,
       companyToken_,
       symbol_,
-      baseURI_
+      metadataInfo_.baseURI,
+      metadataInfo_.description,
+      metadataInfo_.vestingPeriod
     );
   }
   // function allCompaniesLength() external view returns (uint256) {

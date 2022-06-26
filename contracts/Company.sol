@@ -11,6 +11,7 @@ contract Company is ERC721, StreamRedirect, Ownable {
   using Counters for Counters.Counter;
   Counters.Counter private _tokenIdTracker;
   address public companyToken;
+  uint256 public vestingPeriod;
   string private _baseMetadataURI;
 
    constructor(
@@ -20,7 +21,8 @@ contract Company is ERC721, StreamRedirect, Ownable {
     address companyToken_,
     string memory baseURI_,
     address host_,
-    address superTokenFactory_
+    address superTokenFactory_,
+    uint256 vestingPeriod_
   )
     ERC721(name_, symbol_)
     StreamRedirect(ISuperfluid(host_),ISuperTokenFactory(superTokenFactory_),companyToken_)
@@ -28,6 +30,7 @@ contract Company is ERC721, StreamRedirect, Ownable {
     transferOwnership(owner_);
     companyToken = companyToken_;
     _baseMetadataURI = baseURI_;
+    vestingPeriod = vestingPeriod_;
   }
 
   function _baseURI() internal view override returns (string memory) {
