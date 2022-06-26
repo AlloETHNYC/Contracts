@@ -29,7 +29,7 @@ contract StreamRedirect {
   // Events
   event tokensWrapped(uint256 amount);
   event tokensUnwrapped(uint256 amount, address indexed receiver);
-  event allocationStreamCreated(address indexed receiver, int96 flowrate);
+  event allocationStreamCreated(address indexed receiver, int96 flowrate, uint256 creationTimestamp);
   event allocationStreamRedirected(address oldReceiver, address newReceiver);
   event allocationStreamBurned(address indexed receiver);
 
@@ -97,7 +97,7 @@ contract StreamRedirect {
       _superCompanyToken,
       _flowrate
     );  // Note: can include option data. Maybe to include the allocation NFT info or something
-    emit allocationStreamCreated(_receiver, _flowrate);
+    emit allocationStreamCreated(_receiver, _flowrate, block.timestamp);
   }
 
   function _deleteStream(address _receiver) internal {
@@ -130,6 +130,17 @@ contract StreamRedirect {
     }
 
     emit allocationStreamRedirected(receiver, _newReceiver);
+  }
+  
+  function getStreamInfo(address _tokenOwner) external returns (uint256, int96, uint256, uint256) {
+    // Get flowrate of existing allocation
+    (uint256 timestamp, int96 outFlowRate, uint256 deposit, uint256 owedDeposit) = cfaV1.cfa.getFlow(
+      _superCompanyToken,
+      address(this),
+      _tokenOwner
+    ); //CHECK: unclear what happens if flow doesn't exist.
+
+    return (timestamp, outFlowRate, deposit, owedDeposit);
   }
 
 }
