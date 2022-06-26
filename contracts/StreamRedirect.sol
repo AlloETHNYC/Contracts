@@ -59,8 +59,8 @@ contract StreamRedirect {
       IERC20(companyToken),
       uint8(18), // decimals
       ISuperTokenFactory.Upgradability.NON_UPGRADABLE,   // upgradability
-      "test", // string(abi.encodePacked("Super ", IERC20Metadata(companyToken).name())),// string.concat("Super ", IERC20Metadata(companyToken).name()) /*"test"*/,  // token name (Note: add super to string - DONE)
-      "test"// string(abi.encodePacked(IERC20Metadata(companyToken).symbol(), "x"))// string.concat(bytes(IERC20Metadata(companyToken).symbol()), "x") /*"test" */// token symbol (Note: add x to symbol - DONE)
+      string(abi.encodePacked("Super ", IERC20Metadata(companyToken).name())),// string.concat("Super ", IERC20Metadata(companyToken).name()) /*"test"*/,  // token name (Note: add super to string - DONE)
+      string(abi.encodePacked(IERC20Metadata(companyToken).symbol(), "x"))// string.concat(bytes(IERC20Metadata(companyToken).symbol()), "x") /*"test" */// token symbol (Note: add x to symbol - DONE)
     );
 
     _companyNFT = IERC721(address(this));

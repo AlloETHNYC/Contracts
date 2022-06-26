@@ -11,8 +11,9 @@ import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
 import "./StreamRedirect.sol";
 
 contract Company is ERC721, StreamRedirect, Ownable, KeeperCompatibleInterface {
-  using Counters for Counters.Counter;
-  Counters.Counter public _tokenIdTracker;
+  // using Counters for Counters.Counter;
+  // Counters.Counter public _tokenIdTracker;
+  uint256 public _tokenIdTracker = 0;
   address public companyToken;
   uint256 public vestingPeriod;
   string private _baseMetadataURI;
@@ -91,10 +92,12 @@ contract Company is ERC721, StreamRedirect, Ownable, KeeperCompatibleInterface {
     require(receiver != address(0), "Receiver can't be zero address");
     require(balanceOf(receiver) == 0, "Receiver already has an allocation");
 
-    uint256 tokenId = _tokenIdTracker.current();
+    // uint256 tokenId = _tokenIdTracker.current();
+    uint256 tokenId = _tokenIdTracker++;
+
     _safeMint(receiver, tokenId);
 
-    _tokenIdTracker.increment();
+    // _tokenIdTracker.increment();
     //Open up a stream
     //OpenStream(companyToken,this.address, receiver, flowRate)
     _createStream(receiver, flowrate);
