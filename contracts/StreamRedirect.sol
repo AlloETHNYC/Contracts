@@ -59,8 +59,8 @@ contract StreamRedirect {
       IERC20(companyToken),
       uint8(18), // decimals
       ISuperTokenFactory.Upgradability.NON_UPGRADABLE,   // upgradability
-      /*string.concat("Super ", bytes(IERC20Metadata(companyToken).name()))*/ "test",  // token name (Note: add super to string - DONE)
-      /*string.concat(bytes(IERC20Metadata(companyToken).symbol()), "x")*/ "test" // token symbol (Note: add x to symbol - DONE)
+      "test", // string(abi.encodePacked("Super ", IERC20Metadata(companyToken).name())),// string.concat("Super ", IERC20Metadata(companyToken).name()) /*"test"*/,  // token name (Note: add super to string - DONE)
+      "test"// string(abi.encodePacked(IERC20Metadata(companyToken).symbol(), "x"))// string.concat(bytes(IERC20Metadata(companyToken).symbol()), "x") /*"test" */// token symbol (Note: add x to symbol - DONE)
     );
 
     _companyNFT = IERC721(address(this));
@@ -132,7 +132,7 @@ contract StreamRedirect {
     emit allocationStreamRedirected(receiver, _newReceiver);
   }
   
-  function getStreamInfo(address _tokenOwner) external returns (uint256, int96, uint256, uint256) {
+  function getStreamInfo(address _tokenOwner) external view returns (uint256, int96, uint256, uint256) {
     // Get flowrate of existing allocation
     (uint256 timestamp, int96 outFlowRate, uint256 deposit, uint256 owedDeposit) = cfaV1.cfa.getFlow(
       _superCompanyToken,
