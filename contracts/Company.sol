@@ -1,114 +1,125 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
+import {ICompany} from "./Interfaces/ICompany.sol";
+import {IVestingManager} from "./Interfaces/IVestingManager.sol";
 
 import "./StreamRedirect.sol";
 
-contract Company is ERC721, StreamRedirect, Ownable, KeeperCompatibleInterface {
-  // using Counters for Counters.Counter;
-  // Counters.Counter public _tokenIdTracker;
-  uint256 public _tokenIdTracker = 0;
-  address public companyToken;
-  uint256 public vestingPeriod;
-  string private _baseMetadataURI;
 
-  struct Node {
-    uint256 nodeId;
-    uint256 tokenId;
-    uint256 expirationDate;
-    uint256 prevNode;
-    uint256 nextNode;
-  }
+contract Company is ERC721, StreamRedirect, Ownable, ICompany {
 
-  // tokenIds => nodeIds
-  mapping(uint256 => Node) nodesFromTokenId;
-  mapping(uint256 => Node) nodesFromNodeId;
+  IVestingManager public VESTING_MANAGER;
+  address immutable public COMPANY_FACTORY_ADDRESS;
 
-  uint256 head = 0; // nodeId of head
-  uint256 tail = 0; // nodeId of tail
-  uint256 currentNode = 1;
-
-  function _calculateExpiration() internal view returns (uint256) {
-    return block.timestamp + vestingPeriod * 365 days;
-  }
-
-  function push(uint256 _tokenId) public {
-    Node memory newNode = Node(
-      currentNode++, 
-      _tokenId, 
-      _calculateExpiration(),
-      tail,
-      0
-    );
-    tail = newNode.nodeId;
-    nodesFromNodeId[newNode.nodeId] = newNode;
-    nodesFromTokenId[newNode.tokenId] = newNode;
-  }
-
-  function remove(uint256 _tokenId) public {
-    Node storage node = nodesFromTokenId[_tokenId];
-    Node storage prevNode = nodesFromNodeId[node.prevNode];
-    Node storage nextNode = nodesFromNodeId[node.nextNode];
-    prevNode.nextNode = nextNode.nodeId;
-    nextNode.prevNode = prevNode.nodeId;
-  }
+  // NFT stuff
+  uint256 private tokenIdTracker = 0;
+  string private baseMetadataURI;
 
   constructor(
-    string memory name_,
-    string memory symbol_,
-    address owner_,
-    address companyToken_,
-    string memory baseURI_,
-    address host_,
-    address superTokenFactory_,
-    uint256 vestingPeriod_
+    string memory _name,
+    string memory _symbol,
+    address _owner,
+    address _companyToken,
+    string memory _baseURI,
+    address _host,
+    address _superTokenFactory
   )
-    ERC721(name_, symbol_)
-    StreamRedirect(ISuperfluid(host_),ISuperTokenFactory(superTokenFactory_),companyToken_)
+    ERC721(
+      _name, 
+      _symbol
+    )
+    StreamRedirect(
+      ISuperfluid(_host), 
+      _superTokenFactory , 
+      _companyToken
+    )
   {
-    transferOwnership(owner_);
-    companyToken = companyToken_;
-    _baseMetadataURI = baseURI_;
-    vestingPeriod = vestingPeriod_;
+    transferOwnership(_owner);
+    baseMetadataURI = _baseURI;
+    COMPANY_FACTORY_ADDRESS = msg.sender;
   }
 
-  function _baseURI() internal view override returns (string memory) {
-    return _baseMetadataURI;
+  // ---dependencies setters -- 
+
+  function setVestingManagerAddress(address _vestingManagerAddress) external {
+    require(
+      _isCallerCompanyFactory(),
+      "Caller is not Company Factory"
+    );
+    
+    require( // Make sure Vesting manager has not been set already
+      address(VESTING_MANAGER) == address(0), 
+      "Vesting manager address is already set"
+    );
+    require( // Make sure no streams have already been created with recording token in vesting manager
+      tokenIdTracker == 0, 
+      "Vesting streams have already been created"
+    );
+
+    VESTING_MANAGER = IVestingManager(_vestingManagerAddress);
   }
 
-  function deposit(uint256 amount) public onlyOwner {
-    IERC20(companyToken).transferFrom(msg.sender,address(this),amount);
+  // --- External functions --- 
+
+  function deposit(uint256 amount) external override onlyOwner {
+    IERC20(COMPANY_TOKEN).transferFrom(msg.sender,address(this),amount);
     _wrap(amount);
   }
 
 
-  function addReceiver(address receiver, int96 flowrate) public onlyOwner {
-    require(receiver != address(0), "Receiver can't be zero address");
-    require(balanceOf(receiver) == 0, "Receiver already has an allocation");
+  function createTokenVestingStreamNFT(address _vestingReceiver, int96 _flowrate, uint256 _totalVestingAmountInWei, uint256 _vestingPeriodInSeconds) external override onlyOwner {
+    require( // Make sure vesting reciever address is valid
+      _vestingReceiver != address(0), 
+      "Receiver can't be zero address"
+    );
+    require( // Note: Check this later
+      balanceOf(_vestingReceiver) == 0, 
+      "Receiver already has an allocation"
+    );
+    require( // make sure vesting stream flowrate is greater than 0
+      _flowrate > 0, 
+      "flowrate must be greater than 0"
+    );
 
-    // uint256 tokenId = _tokenIdTracker.current();
-    uint256 tokenId = _tokenIdTracker++;
+    // Get new NFT's tokenId
+    uint256 tokenId = tokenIdTracker++; 
 
-    _safeMint(receiver, tokenId);
+    // Mint NFT to vesting receiver
+    _safeMint(_vestingReceiver, tokenId);
 
-    // _tokenIdTracker.increment();
-    //Open up a stream
-    //OpenStream(companyToken,this.address, receiver, flowRate)
-    _createStream(receiver, flowrate);
+    // create vesting stream
+    _createStream(_vestingReceiver, _flowrate);
+
+    // Update VestingManager
+    VESTING_MANAGER.recordNewVestingStream(
+      /*_tokenId=*/tokenId, 
+      /*_vestingAmount=*/_totalVestingAmountInWei, 
+      /*_startTimestamp=*/block.timestamp, 
+      /*_expirationTimestamp=*/block.timestamp + _vestingPeriodInSeconds
+    );
   }
 
-  function removeReceiver(uint256 tokenId) public onlyOwner {
+  function deleteTokenVestingStreamNFT(uint256 tokenId) external override onlyOwner {
     require(_exists(tokenId), "TokenId does not exist");
-    //deleteStream will be handled in burn when _changeReceiver is called
+    // vesting stream will be deleted in beforeTransfer hook
     _burn(tokenId);
-    _deleteStream(ownerOf(tokenId));
   }
+
+  function deleteExpiredTokenVestingStreamNFT(uint256 tokenId) external override {
+    require(
+      _isCallerVestingManager(), 
+      "Caller is not vesting manager"
+    );
+    require(_exists(tokenId), "TokenId does not exist");
+    // vesting stream will be deleted in beforeTransfer hook
+    _burn(tokenId);
+  }
+
+  // --- Internal functions ---
 
   function _beforeTokenTransfer(
     address from,
@@ -117,28 +128,25 @@ contract Company is ERC721, StreamRedirect, Ownable, KeeperCompatibleInterface {
   ) internal override {
 
     if (from == address(0)) { 
-      push(tokenId);
+      return;
     } else if (to == address(0)) {
-      remove(tokenId);
+      _deleteStream(from);
+      VESTING_MANAGER.removeExistingVestingStream(tokenId);
     }
 
-    if (!(from == address(0) || to == address(0))){
-      _changeReceiver(tokenId, to);
-    }
+    _changeReceiver(tokenId, to);
   }
 
-
-  function checkUpkeep(bytes calldata /* checkData */) external view override returns (bool upkeepNeeded, bytes memory /* performData */) {  
-    Node storage nodeHead = nodesFromNodeId[head];
-    upkeepNeeded = nodeHead.expirationDate <= block.timestamp;
+  function _baseURI() internal view override returns (string memory) {
+    return baseMetadataURI;
   }
 
-    function performUpkeep(bytes calldata /* performData */) external override {
-      Node storage nodeHead = nodesFromNodeId[head];
+  function _isCallerCompanyFactory() internal view returns (bool) {
+    return msg.sender == COMPANY_FACTORY_ADDRESS;
+  }
 
-      if (nodeHead.expirationDate <= block.timestamp) { // Revalidate upkeep 
-        _burn(nodeHead.tokenId);
-      }
-    }
+  function _isCallerVestingManager() internal view returns (bool) {
+    return msg.sender == address(VESTING_MANAGER);
+  }
 
 }
